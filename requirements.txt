@@ -1,0 +1,4 @@
+Flask-WTF
+redis
+python-dotenv
+requests
