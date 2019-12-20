@@ -1,7 +1,8 @@
-from flask import Flask, request
+from flask import Flask, request, Response, jsonify, redirect
 import pickle
 from redis import Redis
-
+from flask_hal.link import Link
+import json
 # First Party Libs
 from flask_hal import HAL, document
 
@@ -28,14 +29,16 @@ def addPub():
     key = auth[0] + '/' + str(n_pub)
 
     doc = document.Document(data={
+        'id' : n_pub,
         'author' : request.form['author'],
         'title' : request.form['title']
-    })
+    },
+    links= [Link('del', '/publications/' + str(n_pub))])
     binary = pickle.dumps(doc)
     redis.set(key, binary)
     
     uncoded = pickle.loads(redis.get(key))
-    return uncoded.data['author'], 201
+    return uncoded.data['author'] + str(n_pub), 201
 
 @app.route('/publications/<id>', methods = ['GET'])
 def getPub(id):
@@ -59,14 +62,34 @@ def delPub(id):
     resp = redis.delete(key)
     return str(resp)
 
-@app.route('/publications', methods = ['GET'])
-def start():
+@app.route('/publications/', methods = ['GET'])
+def listPub():
     ret = redis.keys("user*")
+    pubList = []
     pubs = redis.mget(ret)
-    pub = pickle.loads(pubs[0])
+    for pub in pubs:
+        pub = pickle.loads(pub)
+        pubShort = doc = document.Document(data={
+        'id' : pub.data['id'],
+        },
+        links= [Link('view', '/publications/' + str(pub.data['id']))])
+        pubList.append(pubShort.to_json())
+    resp = {key: value for key, value in enumerate(pubList)}
+    return resp
 
-    return pub
+@app.route('/files', methods = ['POST'])
+def addFile():
+    return redirect('pdf/upload', 303)
 
+@app.route('/files/<fid>', methods = ['DELETE'])
+def delFile(fid):
+    return redirect('pdf/delete?fid='+str(fid), 303)
+
+@app.route('/files/<fid>', methods = ['GET'])
+def getFile(fid):
+    return redirect('pdf/download?fid='+str(fid), 303)
+
+@app.route('/publications/<id>', methods = [''])
 
 if __name__ == "__main__":
     app.run(debug=True)
