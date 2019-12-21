@@ -31,9 +31,12 @@ def addPub():
     doc = document.Document(data={
         'id' : n_pub,
         'author' : request.form['author'],
-        'title' : request.form['title']
+        'title' : request.form['title'],
     },
-    links= [Link('del', '/publications/' + str(n_pub))])
+    links= [Link('delete', '/publications/' + str(n_pub), type = 'DELETE'),
+            Link('get', '/publications/' + str(n_pub), type = 'GET')
+            Link('linkFile', '/publications/' + str(n_pub)+'/files/<fid>', type = 'POST')
+            Link('unLinkFile', '/publications/' + str(n_pub)+'/files/<fid>', type = 'DELETE')])
     binary = pickle.dumps(doc)
     redis.set(key, binary)
     
@@ -50,7 +53,7 @@ def getPub(id):
     pub = redis.get(key)
     if (pub is None):
         return "Wrong publication id", 404
-    return pickle.loads(pub)
+    return pickle.loads(pub).to_json()
 
 @app.route('/publications/<id>', methods = ['DELETE'])
 def delPub(id):
@@ -64,6 +67,10 @@ def delPub(id):
 
 @app.route('/publications/', methods = ['GET'])
 def listPub():
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+        return 'Wrong authorization data', 400
     ret = redis.keys("user*")
     pubList = []
     pubs = redis.mget(ret)
@@ -81,6 +88,10 @@ def listPub():
 def addFile():
     return redirect('pdf/upload', 303)
 
+@app.route('/files', methods = ['GET'])
+def getFiles():
+    return redirect('pdf/listFiles', 303)
+
 @app.route('/files/<fid>', methods = ['DELETE'])
 def delFile(fid):
     return redirect('pdf/delete?fid='+str(fid), 303)
@@ -89,7 +100,42 @@ def delFile(fid):
 def getFile(fid):
     return redirect('pdf/download?fid='+str(fid), 303)
 
-@app.route('/publications/<id>', methods = [''])
+@app.route('/publications/<id>/files/<fid>', methods = ['POST'])
+def linkFile(id, fid):
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+        return 'Wrong authorization data', 400
+    key = auth[0] + '/' + str(id)
+    pub = redis.get(key)
+    pub = pickle.loads(pub)
+    pub.links.append(Link('file'+str(fid), '/files'+ str(fid), type='POST'))
+    pub = pickle.dumps(pub)
+    redis.set(key, pub)
+    answ = redis.get(key)
+    return pickle.loads(answ).to_json()
+
+
+@app.route('/publications/<id>/files/<fid>', methods = ['DELETE'])
+def unLinkFile(id, fid):
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+        return 'Wrong authorization data', 400
+    key = auth[0] + '/' + str(id)
+    pub = redis.get(key)
+    pub = pickle.loads(pub)
+    newLinks = []
+    for link in pub.links:
+        if link.rel != 'file'+str(fid):
+            newLinks.append(link)
+    
+    pub.links = newLinks
+
+    pub = pickle.dumps(pub)
+    redis.set(key, pub)
+    answ = redis.get(key)
+    return pickle.loads(answ).to_json()
 
 if __name__ == "__main__":
     app.run(debug=True)
