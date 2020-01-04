@@ -1,0 +1,20 @@
+version: '2'
+services:
+    web:
+        build: ./web
+        ports:
+            - "5000:5000"
+        volumes:
+            - .:/code
+        depends_on:
+            - redis
+            - pdf
+    redis:
+        image: redis
+    
+    pdf:
+        build: ./pdf
+        ports:
+            - 5000:5000
+        volumes:
+            - .:/code

@@ -1,5 +1,6 @@
 from flask import Flask, request, Response, jsonify, redirect
 import pickle
+import requests
 from redis import Redis
 from flask_hal.link import Link
 import json
@@ -32,11 +33,12 @@ def addPub():
         'id' : n_pub,
         'author' : request.form['author'],
         'title' : request.form['title'],
+        'year': request.form['year']
     },
-    links= [Link('delete', '/publications/' + str(n_pub), type = 'DELETE'),
-            Link('get', '/publications/' + str(n_pub), type = 'GET')
-            Link('linkFile', '/publications/' + str(n_pub)+'/files/<fid>', type = 'POST')
-            Link('unLinkFile', '/publications/' + str(n_pub)+'/files/<fid>', type = 'DELETE')])
+    links= [Link('delete', 'http://service/publications/' + str(n_pub), type = 'DELETE'),
+            Link('get', 'http://service/publications/' + str(n_pub), type = 'GET'),
+            Link('linkFile', 'http://service/publications/' + str(n_pub)+'/files/<fid>', type = 'POST'),
+            Link('unLinkFile', 'http://service/publications/' + str(n_pub)+'/files/<fid>', type = 'DELETE')])
     binary = pickle.dumps(doc)
     redis.set(key, binary)
     
@@ -76,29 +78,50 @@ def listPub():
     pubs = redis.mget(ret)
     for pub in pubs:
         pub = pickle.loads(pub)
-        pubShort = doc = document.Document(data={
+        pubShort = document.Document(data={
         'id' : pub.data['id'],
         },
-        links= [Link('view', '/publications/' + str(pub.data['id']))])
-        pubList.append(pubShort.to_json())
+        links= [Link('view', 'http://service/publications/' + str(pub.data['id']), type = 'GET')])
+        #pubList.append(pubShort.to_json())
+        pubList.append(pubShort.to_dict())
     resp = {key: value for key, value in enumerate(pubList)}
-    return resp
+    return json.dumps(resp)
 
 @app.route('/files', methods = ['POST'])
 def addFile():
-    return redirect('pdf/upload', 303)
+    return redirect('http://pdf:5000/upload', 303)
 
 @app.route('/files', methods = ['GET'])
 def getFiles():
-    return redirect('pdf/listFiles', 303)
+    #auth = request.headers['Authorization']
+    #auth = auth.split(':')
+    #if(auth[0]!='user' or auth[1]!='password'):
+    #    return 'Wrong authorization data', 400
+    
+    response = requests.get('http://pdf:5000/files')
+    #return response.text
+    fileList=[]
+    data = response.json()
+    for k, v in data.items():
+        fileShort = document.Document(data={
+        'id' : k,
+        'name' : v
+        },
+        links= [Link('download', 'service/files/' + str(v), type = 'GET'),
+                Link('delete', 'service/files/' + str(v), type = 'DELETE')])
+        #pubList.append(pubShort.to_json())
+        fileList.append(fileShort.to_dict())
+    resp = {key: value for key, value in enumerate(fileList)}
+    return json.dumps(resp)
+
 
 @app.route('/files/<fid>', methods = ['DELETE'])
 def delFile(fid):
-    return redirect('pdf/delete?fid='+str(fid), 303)
+    return redirect('http://pdf:5000/delete?fid='+str(fid), 303)
 
 @app.route('/files/<fid>', methods = ['GET'])
 def getFile(fid):
-    return redirect('pdf/download?fid='+str(fid), 303)
+    return redirect('http://pdf:5000/download?fid='+str(fid), 303)
 
 @app.route('/publications/<id>/files/<fid>', methods = ['POST'])
 def linkFile(id, fid):
@@ -109,11 +132,12 @@ def linkFile(id, fid):
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
     pub = pickle.loads(pub)
-    pub.links.append(Link('file'+str(fid), '/files'+ str(fid), type='POST'))
+    pub.links.append(Link('file'+str(fid), 'http://service/files/'+ str(fid), type='GET', name = str(fid)))
     pub = pickle.dumps(pub)
     redis.set(key, pub)
     answ = redis.get(key)
     return pickle.loads(answ).to_json()
+    return redirect('http://pdf:5000/files', 303)
 
 
 @app.route('/publications/<id>/files/<fid>', methods = ['DELETE'])
@@ -137,5 +161,6 @@ def unLinkFile(id, fid):
     answ = redis.get(key)
     return pickle.loads(answ).to_json()
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port = 80)

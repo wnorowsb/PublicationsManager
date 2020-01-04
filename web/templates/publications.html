@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Upload</title>
+</head>
+<body>
+    <form method="GET" enctype="multipart/form-data">
+        Publications: <br>
+        <fieldset>
+            {% for id, href in pubs %}
+            {{ id }} 
+            <a href="{{ url_for('details', address= href)}}">Details</a> <br>
+            {% endfor %}
+            
+        </fieldset>
+        <br>
+        Files:
+        <br>
+        <fieldset>
+            {% for id, name, download, delete in fs %}
+            {{ id }} <br>
+            {{ name }}<br>
+            <a href="{{ url_for('download', address= download)}}">Download</a>
+            <a href="{{ url_for('delete', address= delete)}}">Delete</a>
+            {% endfor %}
+            
+        </fieldset>
+        <a  href="{{ url_for('logout') }}">Logout</a>
+        <a  href="{{ url_for('add') }}">New Publication</a>
+    </form>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <fieldset>
+            <input type="file" name="file"/>
+            <input type="hidden" name="callback" value="0.0.0.0:80/callback" />
+            <input type="submit"/>
+            
+        </fieldset>
+    </form>
+    <!-- <script src="../static/upload.js"></script> -->
+</body>
+
+</html>

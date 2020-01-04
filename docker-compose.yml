@@ -1,14 +1,34 @@
 version: '2'
 services:
-    web:
-        build: .
+    service:
+        build: ./service
         ports:
-            - "5000:5000"
-        container_name: 'web'
+            - "80:80"
+            - "80"
+        container_name: 'service'
         volumes:
-            - .:/var/www/app
+            - ./service:/var/www/app
         depends_on:
             - redis
     redis:
         image: redis
+    web:
+        build: ./web
+        ports:
+            - "50:50"
+        container_name: 'web'
+        volumes:
+            - ./web:/code
+        depends_on:
+            - pdf
+            - redis
+    pdf:
+        build: ./pdf
+        container_name: 'pdf'
+        ports:
+            - "5000"
+            - "5000:5000"
+        volumes:
+            - ./pdf:/code
+
     

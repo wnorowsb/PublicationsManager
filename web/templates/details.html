@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Upload</title>
+</head>
+<body>
+    <form method="POST" enctype="multipart/form-data">
+        
+        <fieldset>
+            id: <br>
+            {{data['id']}}
+            Author: <br>
+            {{data['author']}}
+            Title: <br>
+            {{data['title']}}
+            <br>
+            Files: <br>
+            {% for k, v in data['_links'].items() %}
+            {%if k[0:4]=='file'%}
+            {{ k }} <a href="{{ url_for('unlink', address = data['_links']['unLinkFile']['href'], method = data['_links']['unLinkFile']['type'], id = v['name'] )}}">Unlink</a>
+            {% endif %}
+            {% endfor %}
+
+            <form action="{{url_for('link', address = data['_links']['linkFile']['href'])}}" target="_blank" method="POST">
+                <p>Link file</p>
+                <select name="fileId">
+                    {% for id in ids %}
+                    <option value ={{id}}>{{id}}</option>
+                    {% endfor %}
+                </select> 
+                <p><input type="submit" value="Submit"></p>
+                </form>
+            <a href="{{ url_for('delete', address = data['_links']['delete']['href'])}}">Delete</a>
+            <a href="{{ url_for('publications') }}">Back</a>
+            
+        </fieldset>
+        <a  href="{{ url_for('logout') }}">Logout</a>
+    </form>
+    <!-- <script src="../static/upload.js"></script> -->
+</body>
+
+</html>
