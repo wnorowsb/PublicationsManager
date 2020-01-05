@@ -91,7 +91,20 @@ def details():
     for _, v in files.items():
         ids.append(v["id"])
 
-    return render_template('details.html', data=data, ids=ids)
+    form = HomeForm()
+    if form.validate_on_submit():
+        address = request.args.get('address', None)
+        id = request.form['fileId'].data
+        address = address.replace('<fid>',str(id))
+        response = requests.post( address, headers= {"Authorization": nick + ":password"})
+        return redirect(url_for('details'))
+    # if request.method == "POST":
+    #     address = request.args.get('address', None)
+    #     id = request.form['fileId']
+    #     address = address.replace('<fid>',str(id))
+    #     response = requests.post( address, headers= {"Authorization": nick + ":password"})
+
+    return render_template('details.html', data=data, ids=ids, form=form)
 
 @app.route('/download')
 def download():
@@ -101,7 +114,7 @@ def download():
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
     return redirect(url_for('publications'))
 
-@app.route('/link', methods=['POST'])
+@app.route('/link', methods=['GET', 'POST'])
 def link():
     sessionId = request.cookies.get('hash')
     nick = redis.get(sessionId)
@@ -109,8 +122,8 @@ def link():
     id = request.form['fileId']
     address = address.replace('<fid>',str(id))
     response = requests.post( address, headers= {"Authorization": nick + ":password"})
-    return True
-
+    #return redirect(url_for('publications'))
+    return redirect(request.referrer)
 @app.route('/unlink')
 def unlink():
     sessionId = request.cookies.get('hash')
@@ -119,11 +132,9 @@ def unlink():
     id = request.args.get('id', None)
     address = address.replace('<fid>',str(id))
     method = request.args.get('method', None)
-    if method =='POST':
-        response = requests.post( address, headers= {"Authorization": nick + ":password"})
     if method =='DELETE':
         response = requests.delete( address, headers= {"Authorization": nick + ":password"})
-    return redirect(url_for('publications'))
+    return redirect(request.referrer)
 
 @app.route('/delete')
 def delete():

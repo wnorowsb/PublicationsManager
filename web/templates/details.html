@@ -7,8 +7,9 @@
     <title>Upload</title>
 </head>
 <body>
-    <form method="POST" enctype="multipart/form-data">
-        
+    
+    <form method="POST" action="{{ url_for('link', address = data['_links']['linkFile']['href'])}}" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
         <fieldset>
             id: <br>
             {{data['id']}}
@@ -23,22 +24,23 @@
             {{ k }} <a href="{{ url_for('unlink', address = data['_links']['unLinkFile']['href'], method = data['_links']['unLinkFile']['type'], id = v['name'] )}}">Unlink</a>
             {% endif %}
             {% endfor %}
-
-            <form action="{{url_for('link', address = data['_links']['linkFile']['href'])}}" target="_blank" method="POST">
+                
+            <!-- <form method="POST" action="{{ url_for('link', address = data['_links']['linkFile']['href'])}}"> -->
                 <p>Link file</p>
                 <select name="fileId">
                     {% for id in ids %}
-                    <option value ={{id}}>{{id}}</option>
+                    <option value ='{{ id }}'>{{ id }}</option>
                     {% endfor %}
                 </select> 
-                <p><input type="submit" value="Submit"></p>
-                </form>
+                <input type="submit" value="Submit">
+            <!-- </form> -->
             <a href="{{ url_for('delete', address = data['_links']['delete']['href'])}}">Delete</a>
             <a href="{{ url_for('publications') }}">Back</a>
             
         </fieldset>
         <a  href="{{ url_for('logout') }}">Logout</a>
     </form>
+    
     <!-- <script src="../static/upload.js"></script> -->
 </body>
 
