@@ -93,13 +93,13 @@ def addFile():
 
 @app.route('/files', methods = ['GET'])
 def getFiles():
-    #auth = request.headers['Authorization']
-    #auth = auth.split(':')
-    #if(auth[0]!='user' or auth[1]!='password'):
-    #    return 'Wrong authorization data', 400
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+       return 'Wrong authorization data', 400
     
     response = requests.get('http://pdf:5000/files')
-    #return response.text
+    
     fileList=[]
     data = response.json()
     for k, v in data.items():
@@ -117,10 +117,18 @@ def getFiles():
 
 @app.route('/files/<fid>', methods = ['DELETE'])
 def delFile(fid):
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+        return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/delete?fid='+str(fid), 303)
 
 @app.route('/files/<fid>', methods = ['GET'])
 def getFile(fid):
+    auth = request.headers['Authorization']
+    auth = auth.split(':')
+    if(auth[0]!='user' or auth[1]!='password'):
+        return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/download?fid='+str(fid), 303)
 
 @app.route('/publications/<id>/files/<fid>', methods = ['POST'])

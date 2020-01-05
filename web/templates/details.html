@@ -9,23 +9,23 @@
 <body>
     
     <form method="POST" action="{{ url_for('link', address = data['_links']['linkFile']['href'])}}" enctype="multipart/form-data">
-        {{ form.hidden_tag() }}
         <fieldset>
-            id: <br>
-            {{data['id']}}
-            Author: <br>
-            {{data['author']}}
-            Title: <br>
-            {{data['title']}}
+            id: 
+            {{data['id']}} <br>
+            Author: 
+            {{data['author']}} <br>
+            Title: 
+            {{data['title']}} <br>
             <br>
             Files: <br>
             {% for k, v in data['_links'].items() %}
             {%if k[0:4]=='file'%}
             {{ k }} <a href="{{ url_for('unlink', address = data['_links']['unLinkFile']['href'], method = data['_links']['unLinkFile']['type'], id = v['name'] )}}">Unlink</a>
+            <a href="{{ url_for('download', address = data['_links'][k]['href']) }}">Download </a> 
+            <br>
             {% endif %}
             {% endfor %}
                 
-            <!-- <form method="POST" action="{{ url_for('link', address = data['_links']['linkFile']['href'])}}"> -->
                 <p>Link file</p>
                 <select name="fileId">
                     {% for id in ids %}
@@ -33,12 +33,12 @@
                     {% endfor %}
                 </select> 
                 <input type="submit" value="Submit">
-            <!-- </form> -->
-            <a href="{{ url_for('delete', address = data['_links']['delete']['href'])}}">Delete</a>
+            <br>
+            <a href="{{ url_for('delete', address = data['_links']['delete']['href'])}}">Delete this publication</a>
+            <br>
             <a href="{{ url_for('publications') }}">Back</a>
             
         </fieldset>
-        <a  href="{{ url_for('logout') }}">Logout</a>
     </form>
     
     <!-- <script src="../static/upload.js"></script> -->

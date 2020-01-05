@@ -8,7 +8,7 @@
 </head>
 <body>
     <form method="GET" enctype="multipart/form-data">
-        Publications: <br>
+        Publications: <a  href="{{ url_for('add') }}">New Publication</a> <br>
         <fieldset>
             {% for id, href in pubs %}
             {{ id }} 
@@ -21,16 +21,16 @@
         <br>
         <fieldset>
             {% for id, name, download, delete in fs %}
-            {{ id }} <br>
-            {{ name }}<br>
+            {{ id }} 
+            {{ name }}
             <a href="{{ url_for('download', address= download)}}">Download</a>
             <a href="{{ url_for('delete', address= delete)}}">Delete</a>
+            <br>
             {% endfor %}
             
         </fieldset>
-        <a  href="{{ url_for('logout') }}">Logout</a>
-        <a  href="{{ url_for('add') }}">New Publication</a>
     </form>
+    <br> Upload file: <br>
     <form method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <fieldset>
@@ -40,6 +40,8 @@
             
         </fieldset>
     </form>
+    <br>
+    <a  href="{{ url_for('logout') }}">Logout</a>
     <!-- <script src="../static/upload.js"></script> -->
 </body>
 

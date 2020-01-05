@@ -68,7 +68,6 @@ def login():
             sessionId = str(uuid4())
             resp.set_cookie('hash', sessionId)
             redis.set(sessionId, username)
-
             return resp
 
     return render_template('login.html', title='Login', form=form)
@@ -90,21 +89,7 @@ def details():
     ids =[]
     for _, v in files.items():
         ids.append(v["id"])
-
-    form = HomeForm()
-    if form.validate_on_submit():
-        address = request.args.get('address', None)
-        id = request.form['fileId'].data
-        address = address.replace('<fid>',str(id))
-        response = requests.post( address, headers= {"Authorization": nick + ":password"})
-        return redirect(url_for('details'))
-    # if request.method == "POST":
-    #     address = request.args.get('address', None)
-    #     id = request.form['fileId']
-    #     address = address.replace('<fid>',str(id))
-    #     response = requests.post( address, headers= {"Authorization": nick + ":password"})
-
-    return render_template('details.html', data=data, ids=ids, form=form)
+    return render_template('details.html', data=data, ids=ids)
 
 @app.route('/download')
 def download():
@@ -112,7 +97,7 @@ def download():
     nick = redis.get(sessionId)
     address = request.args.get('address', None)
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
-    return redirect(url_for('publications'))
+    return redirect(request.referrer)
 
 @app.route('/link', methods=['GET', 'POST'])
 def link():
@@ -122,8 +107,8 @@ def link():
     id = request.form['fileId']
     address = address.replace('<fid>',str(id))
     response = requests.post( address, headers= {"Authorization": nick + ":password"})
-    #return redirect(url_for('publications'))
     return redirect(request.referrer)
+
 @app.route('/unlink')
 def unlink():
     sessionId = request.cookies.get('hash')
@@ -142,9 +127,7 @@ def delete():
     nick = redis.get(sessionId)
     address = request.args.get('address', None)
     response = requests.delete( address, headers= {"Authorization": nick + ":password"})
-    data = response.json()
     return redirect(url_for('publications'))
-    #return response.text
 
 @app.route('/add', methods = ['GET', 'POST'])
 def add():
@@ -155,7 +138,6 @@ def add():
         data = {'author': form.author.data, 'title': form.title.data, 'year': form.year.data}
         response = requests.post('http://service/publications/', headers= {"Authorization": nick + ":password"}, data=data )
         return redirect(url_for('publications'))
-        #return response.text
     return render_template('create.html', form=form)
 
 if __name__ == '__main__':
