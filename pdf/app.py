@@ -15,7 +15,6 @@ def send():
     file.save('file.csv')
     return 'Succeed'
 
-
 @app.route('/files', methods=['GET'])
 def listFiles():
     ids = {'1': 'file1', '2':'file2', '3': 'file3'}

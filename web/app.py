@@ -21,7 +21,7 @@ def publications():
     #Przekazuje na sztywno haslo ktore jest akceptowane przez usluge, aby nie zmieniac zbyt mocno logiki modulu web
     response = requests.get('http://service:80/publications', headers= {"Authorization": nick + ":password"})
     response = json.loads(response.text)
-    files = requests.get('http://service:80/files')
+    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     pubs=[]
     fs =[]
@@ -39,7 +39,7 @@ def publications():
 
     if form.validate_on_submit():
         files = { 'file': form.uploadFile.data }
-        r = requests.post('http://pdf:5000/upload', files = files)
+        r = requests.post('http://service/files', files = files, headers= {"Authorization": nick + ":password"})
         return r.text
     
     if (nick == request.cookies.get('username')): 
@@ -49,11 +49,11 @@ def publications():
         return render_template('publications.html' )
 
 
-@app.route("/list", methods = ['GET'])
-def listFiles():
-    answ = requests.get('http://pdf:5000/list')
-    ret = answ.text
-    return str(ret)
+# @app.route("/list", methods = ['GET'])
+# def listFiles():
+#     answ = requests.get('http://pdf:5000/list')
+#     ret = answ.text
+#     return str(ret)
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -84,7 +84,7 @@ def details():
     address = request.args.get('address', None)
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
     data = response.json()
-    files = requests.get('http://service:80/files')
+    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     ids =[]
     for _, v in files.items():
