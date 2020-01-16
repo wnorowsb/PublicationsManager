@@ -3,5 +3,14 @@ Flask-WTF
 redis
 python-dotenv
 requests
+click
+gevent
+greenlet
+gunicorn
+itsdangerous
+Jinja2
+MarkupSafe
+
+Werkzeug
 six
 authlib

@@ -1,4 +1,4 @@
-from flask import Flask, make_response, request, render_template, url_for, flash, redirect,request,abort, session
+from flask import Flask, make_response, request, render_template, url_for, flash, redirect,request,abort, session, Response
 from forms import LoginForm, HomeForm, CreateForm
 from redis import Redis, StrictRedis
 from dotenv import load_dotenv
@@ -62,6 +62,21 @@ def callback_handling():
     }
     return redirect('/publications')
 
+def event_stream(user):
+    pubsub = redis.pubsub(ignore_subscribe_messages=True)
+    pubsub.subscribe(user)
+    # TODO: handle client disconnection.
+    for message in pubsub.listen():
+        yield 'data: %s\n\n' % message['data']
+
+def post(user):
+    redis.publish(user, 'There is new publication!')
+    return True
+
+#powinien dostawac indentyfikator
+@app.route('/stream/<user>')
+def stream(user):
+    return Response(event_stream(user), mimetype="text/event-stream" )
 
 @requires_auth
 @app.route("/publications", methods = ['GET','POST'])
@@ -72,7 +87,7 @@ def publications():
     #Przekazuje na sztywno haslo ktore jest akceptowane przez usluge, aby nie zmieniac zbyt mocno logiki modulu web
     response = requests.get('http://service:80/publications/', headers= {"Authorization": nick + ":password"})
     response = json.loads(response.text)
-    files = requests.get('http://service:80/files/', headers= {"Authorization": nick + ":password"})
+    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     pubs=[]
     fs =[]
@@ -93,20 +108,8 @@ def publications():
         r = requests.post('http://service/files/', files = files, headers= {"Authorization": nick + ":password"})
         return r.text
 
-    return render_template('publications.html', pubs=pubs, form = form, fs=fs)
-    
-    # if (nick == request.cookies.get('username')): 
-    #     return render_template('publications.html', pubs=pubs, form = form, fs=fs)
-    #     #return files.json()
-    # else:
-    #     return render_template('publications.html' )
+    return render_template('publications.html', pubs=pubs, form = form, fs=fs, user = nick)
 
-
-# @app.route("/list", methods = ['GET'])
-# def listFiles():
-#     answ = requests.get('http://pdf:5000/list')
-#     ret = answ.text
-#     return str(ret)
 
 
 @app.route('/logout')
@@ -184,9 +187,11 @@ def add():
     if form.validate_on_submit():
         data = {'author': form.author.data, 'title': form.title.data, 'year': form.year.data}
         response = requests.post('http://service/publications/', headers= {"Authorization": nick + ":password"}, data=data )
+        redis.publish(nick, 'There is new publication!')
         return redirect(url_for('publications'))
     return render_template('create.html', form=form)
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=50)
+#    app.run(debug=True, host='0.0.0.0', port=50)
+    app.run()
