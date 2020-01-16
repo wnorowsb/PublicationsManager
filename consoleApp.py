@@ -87,7 +87,9 @@ def displayPub(href):
             print(pub['_links'][k]['name'])
 
 def uploadFile():
-    path = input()
+    path = input("Enter file path or /'back/' to exit this mode.")
+    if (path=='back'):
+        return True
     files = { 'file': open(path, 'rb') }
     r = requests.post('http://0.0.0.0:80/files', files = files, headers= {"Authorization": username + ':' + password})
     return r.text

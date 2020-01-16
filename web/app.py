@@ -1,27 +1,78 @@
-from flask import Flask, make_response, request, render_template, url_for, flash, redirect,request,abort
+from flask import Flask, make_response, request, render_template, url_for, flash, redirect,request,abort, session
 from forms import LoginForm, HomeForm, CreateForm
-from redis import Redis
+from redis import Redis, StrictRedis
 from dotenv import load_dotenv
 import requests
 import os
 import json
 from uuid import uuid4
+from functools import wraps
+from authlib.flask.client import OAuth
+from six.moves.urllib.parse import urlencode
 
 app = Flask(__name__)
-redis = Redis(host='redis', port=6379, decode_responses=True)
+redis = StrictRedis(host='redis', port=6379, decode_responses=True)
 load_dotenv()
 
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL")
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
+AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
+AUTH0_BASE_URL = 'https://' + AUTH0_DOMAIN
+AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 
+oauth = OAuth(app)
+
+auth0 = oauth.register(
+    'auth0',
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
+    api_base_url=AUTH0_BASE_URL,
+    access_token_url=AUTH0_BASE_URL + '/oauth/token',
+    authorize_url=AUTH0_BASE_URL + '/authorize',
+    client_kwargs={
+        'scope': 'openid profile email',
+    },
+)
+
+def requires_auth(f):
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    if 'profile' not in session:
+      # Redirect to Login page here
+      return redirect('/')
+    return f(*args, **kwargs)
+
+  return decorated
+
+@app.route('/callback')
+def callback_handling():
+    # Handles response from token endpoint
+    auth0.authorize_access_token()
+    resp = auth0.get('userinfo')
+    userinfo = resp.json()
+
+    # Store the user information in flask session.
+    session['jwt_payload'] = userinfo
+    session['profile'] = {
+        'user_id': userinfo['sub'],
+        'name': userinfo['name'],
+        'picture': userinfo['picture']
+    }
+    return redirect('/publications')
+
+
+@requires_auth
 @app.route("/publications", methods = ['GET','POST'])
 def publications():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    #sessionId = request.cookies.get('hash')
+    nick = session['profile']['name']
     form = HomeForm()
     #Przekazuje na sztywno haslo ktore jest akceptowane przez usluge, aby nie zmieniac zbyt mocno logiki modulu web
-    response = requests.get('http://service:80/publications', headers= {"Authorization": nick + ":password"})
+    response = requests.get('http://service:80/publications/', headers= {"Authorization": nick + ":password"})
     response = json.loads(response.text)
-    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
+    files = requests.get('http://service:80/files/', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     pubs=[]
     fs =[]
@@ -39,14 +90,16 @@ def publications():
 
     if form.validate_on_submit():
         files = { 'file': form.uploadFile.data }
-        r = requests.post('http://service/files', files = files, headers= {"Authorization": nick + ":password"})
+        r = requests.post('http://service/files/', files = files, headers= {"Authorization": nick + ":password"})
         return r.text
+
+    return render_template('publications.html', pubs=pubs, form = form, fs=fs)
     
-    if (nick == request.cookies.get('username')): 
-        return render_template('publications.html', pubs=pubs, form = form, fs=fs)
-        #return files.json()
-    else:
-        return render_template('publications.html' )
+    # if (nick == request.cookies.get('username')): 
+    #     return render_template('publications.html', pubs=pubs, form = form, fs=fs)
+    #     #return files.json()
+    # else:
+    #     return render_template('publications.html' )
 
 
 # @app.route("/list", methods = ['GET'])
@@ -55,64 +108,58 @@ def publications():
 #     ret = answ.text
 #     return str(ret)
 
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
-
-        if ( password == '123'):
-            resp = make_response(redirect(url_for('publications')))
-            resp.set_cookie('username', username)
-            sessionId = str(uuid4())
-            resp.set_cookie('hash', sessionId)
-            redis.set(sessionId, username)
-            return resp
-
-    return render_template('login.html', title='Login', form=form)
 
 @app.route('/logout')
 def logout():
-    redis.delete(request.cookies.get('hash'))
-    return redirect(url_for('login'))
+    # Clear session stored data
+    session.clear()
+    # Redirect user to logout endpoint
+    params = {'returnTo': url_for('home', _external=True), 'client_id': AUTH0_CLIENT_ID}
+    return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
 
+@app.route('/login0')
+def login0():
+    return auth0.authorize_redirect(redirect_uri=AUTH0_CALLBACK_URL)
+
+@app.route('/home')
+def home():
+  return render_template("home.html")
+
+@requires_auth
 @app.route('/details', methods = ['GET', 'POST'])
 def details():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     address = request.args.get('address', None)
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
     data = response.json()
-    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
+    files = requests.get('http://service:80/files/', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     ids =[]
     for _, v in files.items():
         ids.append(v["id"])
     return render_template('details.html', data=data, ids=ids)
 
+@requires_auth
 @app.route('/download')
 def download():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     address = request.args.get('address', None)
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
     return redirect(request.referrer)
 
 @app.route('/link', methods=['GET', 'POST'])
 def link():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     address = request.args.get('address', None)
     id = request.form['fileId']
     address = address.replace('<fid>',str(id))
     response = requests.post( address, headers= {"Authorization": nick + ":password"})
     return redirect(request.referrer)
 
+@requires_auth
 @app.route('/unlink')
 def unlink():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     address = request.args.get('address', None)
     id = request.args.get('id', None)
     address = address.replace('<fid>',str(id))
@@ -121,24 +168,25 @@ def unlink():
         response = requests.delete( address, headers= {"Authorization": nick + ":password"})
     return redirect(request.referrer)
 
+@requires_auth
 @app.route('/delete')
 def delete():
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     address = request.args.get('address', None)
     response = requests.delete( address, headers= {"Authorization": nick + ":password"})
     return redirect(url_for('publications'))
 
+@requires_auth
 @app.route('/add', methods = ['GET', 'POST'])
 def add():
     form = CreateForm()
-    sessionId = request.cookies.get('hash')
-    nick = redis.get(sessionId)
+    nick = session['profile']['name']
     if form.validate_on_submit():
         data = {'author': form.author.data, 'title': form.title.data, 'year': form.year.data}
         response = requests.post('http://service/publications/', headers= {"Authorization": nick + ":password"}, data=data )
         return redirect(url_for('publications'))
     return render_template('create.html', form=form)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=50)

@@ -3,3 +3,5 @@ Flask-WTF
 redis
 python-dotenv
 requests
+six
+authlib

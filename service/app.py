@@ -1,13 +1,13 @@
 from flask import Flask, request, Response, jsonify, redirect
 import pickle
 import requests
-from redis import Redis
+from redis import Redis, StrictRedis
 from flask_hal.link import Link
 import json
 # First Party Libs
 from flask_hal import HAL, document
 
-redis = Redis(host='redis', port=6379)
+redis = StrictRedis(host='redis', port=6379)
 
 app = Flask(__name__)
 HAL(app)  # Initialise HAL
@@ -17,7 +17,7 @@ n_pub = 0
 def addPub():
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
 
     n_pub = redis.get('n_pub')
@@ -49,7 +49,7 @@ def addPub():
 def getPub(id):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
@@ -61,7 +61,7 @@ def getPub(id):
 def delPub(id):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     resp = redis.delete(key)
@@ -71,7 +71,7 @@ def delPub(id):
 def listPub():
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     ret = redis.keys("user*")
     pubList = []
@@ -95,7 +95,7 @@ def addFile():
 def getFiles():
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
        return 'Wrong authorization data', 400
     
     response = requests.get('http://pdf:5000/files')
@@ -119,7 +119,7 @@ def getFiles():
 def delFile(fid):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/delete?fid='+str(fid), 303)
 
@@ -127,7 +127,7 @@ def delFile(fid):
 def getFile(fid):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/download?fid='+str(fid), 303)
 
@@ -135,7 +135,7 @@ def getFile(fid):
 def linkFile(id, fid):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
@@ -152,7 +152,7 @@ def linkFile(id, fid):
 def unLinkFile(id, fid):
     auth = request.headers['Authorization']
     auth = auth.split(':')
-    if(auth[0]!='user' or auth[1]!='password'):
+    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
