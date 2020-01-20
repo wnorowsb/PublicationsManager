@@ -3,11 +3,11 @@ FROM python:3
 WORKDIR /home/app
 
 #If we add the requirements and install dependencies first, docker can use cache if requirements don't change
-#ADD requirements.txt /home/app
-ADD . /home/app
-RUN pip install --no-cache-dir -r requirements.txt \
-    && chmod +x /home/app/start.sh
+ADD requirements.txt /home/app
+#ADD . /home/app
+RUN pip install --no-cache-dir -r requirements.txt
+#    && chmod +x /home/app/start.sh
 
 #ADD . /home/app
 
-CMD ["/home/app/start.sh"]
+CMD ["/bin/sh", "/home/app/start.sh"]

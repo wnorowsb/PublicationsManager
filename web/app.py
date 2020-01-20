@@ -105,7 +105,7 @@ def publications():
 
     if form.validate_on_submit():
         files = { 'file': form.uploadFile.data }
-        r = requests.post('http://service/files/', files = files, headers= {"Authorization": nick + ":password"})
+        r = requests.post('http://service/files', files = files, headers= {"Authorization": nick + ":password"})
         return r.text
 
     return render_template('publications.html', pubs=pubs, form = form, fs=fs, user = nick)
@@ -135,7 +135,7 @@ def details():
     address = request.args.get('address', None)
     response = requests.get( address, headers= {"Authorization": nick + ":password"})
     data = response.json()
-    files = requests.get('http://service:80/files/', headers= {"Authorization": nick + ":password"})
+    files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
     ids =[]
     for _, v in files.items():

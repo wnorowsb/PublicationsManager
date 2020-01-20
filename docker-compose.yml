@@ -18,7 +18,7 @@ services:
             - "50:50"
         container_name: 'web'
         volumes:
-            - ./web:/code
+            - ./web:/home/app
         depends_on:
             - pdf
             - redis
