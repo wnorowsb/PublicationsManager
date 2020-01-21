@@ -50,7 +50,7 @@ def newPublication():
     data['title'] = input()
     print('Enter year:')
     data['year'] = input()
-    response = requests.post('http://0.0.0.0:80/publications/', headers= {"Authorization": username + ':' + password}, data=data)
+    response = requests.post('http://0.0.0.0:80/publications', headers= {"Authorization": username + ':' + password}, data=data)
     return response
 
 def listPublications():

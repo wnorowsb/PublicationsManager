@@ -70,7 +70,7 @@ def event_stream(user):
         yield 'data: %s\n\n' % message['data']
 
 def post(user):
-    redis.publish(user, 'There is new publication!')
+    redis.publish(user, 'There is a new publication!')
     return True
 
 #powinien dostawac indentyfikator
@@ -85,7 +85,9 @@ def publications():
     nick = session['profile']['name']
     form = HomeForm()
     #Przekazuje na sztywno haslo ktore jest akceptowane przez usluge, aby nie zmieniac zbyt mocno logiki modulu web
-    response = requests.get('http://service:80/publications/', headers= {"Authorization": nick + ":password"})
+    response = requests.get('http://service:80/publications', headers= {"Authorization": nick + ":password"})
+
+    print(response.text)
     response = json.loads(response.text)
     files = requests.get('http://service:80/files', headers= {"Authorization": nick + ":password"})
     files = json.loads(files.text)
@@ -186,7 +188,7 @@ def add():
     nick = session['profile']['name']
     if form.validate_on_submit():
         data = {'author': form.author.data, 'title': form.title.data, 'year': form.year.data}
-        response = requests.post('http://service/publications/', headers= {"Authorization": nick + ":password"}, data=data )
+        response = requests.post('http://service/publications', headers= {"Authorization": nick + ":password"}, data=data )
         redis.publish(nick, 'There is new publication!')
         return redirect(url_for('publications'))
     return render_template('create.html', form=form)

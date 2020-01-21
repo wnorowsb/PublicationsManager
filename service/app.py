@@ -13,11 +13,16 @@ app = Flask(__name__)
 HAL(app)  # Initialise HAL
 n_pub = 0
 
-@app.route('/publications/', methods = ['POST'])
+def authenticated(auth):
+    if (auth[1] == "password"):
+        return True
+    else:
+        return False
+
+@app.route('/publications', methods = ['POST'])
 def addPub():
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
 
     n_pub = redis.get('n_pub')
@@ -47,9 +52,8 @@ def addPub():
 
 @app.route('/publications/<id>', methods = ['GET'])
 def getPub(id):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
@@ -59,19 +63,17 @@ def getPub(id):
 
 @app.route('/publications/<id>', methods = ['DELETE'])
 def delPub(id):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     resp = redis.delete(key)
     return str(resp)
 
-@app.route('/publications/', methods = ['GET'])
+@app.route('/publications', methods = ['GET'])
 def listPub():
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     ret = redis.keys("user*")
     pubList = []
@@ -93,10 +95,9 @@ def addFile():
 
 @app.route('/files', methods = ['GET'])
 def getFiles():
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
-       return 'Wrong authorization data', 400
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
+        return 'Wrong authorization data', 400
     
     response = requests.get('http://pdf:5000/files')
     
@@ -117,25 +118,22 @@ def getFiles():
 
 @app.route('/files/<fid>', methods = ['DELETE'])
 def delFile(fid):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/delete?fid='+str(fid), 303)
 
 @app.route('/files/<fid>', methods = ['GET'])
 def getFile(fid):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     return redirect('http://pdf:5000/download?fid='+str(fid), 303)
 
 @app.route('/publications/<id>/files/<fid>', methods = ['POST'])
 def linkFile(id, fid):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
@@ -150,9 +148,8 @@ def linkFile(id, fid):
 
 @app.route('/publications/<id>/files/<fid>', methods = ['DELETE'])
 def unLinkFile(id, fid):
-    auth = request.headers['Authorization']
-    auth = auth.split(':')
-    if(auth[0]!='user@wp.pl' or auth[1]!='password'):
+    auth = request.headers['Authorization'].split(':')
+    if not authenticated(auth):
         return 'Wrong authorization data', 400
     key = auth[0] + '/' + str(id)
     pub = redis.get(key)
